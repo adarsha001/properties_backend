@@ -16,10 +16,12 @@ app.use(express.json());
 // Routes
 const chatRoutes = require("./routes/chatRoutes");
 const adminRoute = require("./routes/adminRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoute);
 
+app.use('/api/contact', contactRoutes);
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
