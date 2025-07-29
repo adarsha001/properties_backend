@@ -7,7 +7,7 @@ const app = express();
 
 // ✅ Allow CORS only from your Vercel frontend
 app.use(cors({
-  origin: "https://garudanproperties.vercel.app",
+  origin: "https://spproperties-delta.vercel.app/",
   credentials: true, // Optional: if you're using cookies or authorization headers
 }));
 
