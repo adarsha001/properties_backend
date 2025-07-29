@@ -5,10 +5,17 @@ require("dotenv").config();
 
 const app = express();
 
-// ✅ Allow CORS only from your Vercel frontend
+const allowedOrigins = ["https://spproperties-delta.vercel.app"];
+
 app.use(cors({
-  origin: "https://spproperties-delta.vercel.app/",
-  credentials: true, // Optional: if you're using cookies or authorization headers
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
 }));
 
 app.use(express.json());
