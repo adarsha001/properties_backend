@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const app = express();
 
-const allowedOrigins = ["https://spproperties-delta.vercel.app"];
+const allowedOrigins = ["https://sppropertiesbengaluru.com"];
 
 app.use(cors({
   origin: function (origin, callback) {
