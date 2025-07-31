@@ -12,7 +12,7 @@ router.post("/login", (req, res) => {
   const { password } = req.body;
 
   if (password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ role: "admin" }, JWT_SECRET, { expiresIn: "30d" });
+    const token = jwt.sign({ role: "admin" }, JWT_SECRET, { expiresIn: "10h" });
     return res.json({ token });
   }
 

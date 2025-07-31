@@ -26,15 +26,7 @@ router.post("/", async (req, res) => {
     res.status(400).json({ error: "Error saving chat data" });
   }
 });
-// Admin protected route to fetch all chat submissions
-router.get("/", verifyToken, async (req, res) => {
-  try {
-    const chats = await Chat.find().sort({ createdAt: -1 });
-    res.json(chats);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch chats" });
-  }
-});
+
 router.put('/:id', verifyToken, async (req, res) => {
   const { contacted } = req.body;
   await Chat.findByIdAndUpdate(req.params.id, { contacted });
@@ -45,6 +37,52 @@ router.put('/:id', verifyToken, async (req, res) => {
 router.delete('/:id', verifyToken, async (req, res) => {
   await Chat.findByIdAndDelete(req.params.id);
   res.json({ message: 'Chat deleted' });
+});
+router.post("/:id/call-details", async (req, res) => {
+  try {
+    const chat = await Chat.findById(req.params.id);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    const { buyingStatus, description, followUpDate } = req.body;
+    
+    chat.callDetails.push({
+      buyingStatus,
+      description,
+      followUpDate: new Date(followUpDate)
+    });
+
+    const updatedChat = await chat.save();
+    res.status(201).json(updatedChat);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// Get all chats with call details
+router.get("/", async (req, res) => {
+  try {
+    const chats = await Chat.find().sort({ createdAt: -1 });
+    res.json(chats);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Delete a call detail
+router.delete("/:chatId/call-details/:callId", async (req, res) => {
+  try {
+    const chat = await Chat.findById(req.params.chatId);
+    if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+    chat.callDetails = chat.callDetails.filter(
+      call => call._id.toString() !== req.params.callId
+    );
+
+    await chat.save();
+    res.json({ message: "Call detail deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;

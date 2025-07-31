@@ -6,6 +6,10 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 // const bcrypt = require("bcryptjs");
 const Lead = require('../models/Lead');
+  // Keep secret in .env
+
+require("dotenv").config();
+const JWT_SECRET = process.env.JWT_SECRET
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(403).json({ error: "Token missing" });
@@ -34,6 +38,16 @@ router.get("/", verifyToken, async (req, res) => {
     res.json(chats);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch chats" });
+  }
+});
+
+router.delete("/:id", verifyToken, async (req, res) => {
+  try {
+    const deleted = await Lead.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Lead not found" });
+    res.json({ success: true, message: "Lead deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete lead" });
   }
 });
 

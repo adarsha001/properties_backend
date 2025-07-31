@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const app = express();
 
-const allowedOrigins = ["https://sppropertiesbengaluru.com"];
+const allowedOrigins = ["https://sppropertiesbengaluru.com","http://localhost:5173"];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -25,9 +25,11 @@ const chatRoutes = require("./routes/chatRoutes");
 const adminRoute = require("./routes/adminRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const leadsRoute=require("./routes/leads")
+const callDetailRoutes = require('./routes/callDetails');
 app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoute);
 app.use("/api/leads", leadsRoute);
+app.use('/api/callDetails', callDetailRoutes);
 
 app.use('/api/contact', contactRoutes);
 // MongoDB connection
