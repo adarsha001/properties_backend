@@ -11,24 +11,9 @@ const chatSchema = new mongoose.Schema({
   phone: String,
   contacted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
-  callDetails: [{
-    buyingStatus: { 
-      type: String, 
-      enum: ['high', 'mid', 'low'], 
-      required: true 
-    },
-    description: { 
-      type: String, 
-      required: true 
-    },
-    followUpDate: { 
-      type: Date, 
-      required: true 
-    },
-    createdAt: { 
-      type: Date, 
-      default: Date.now 
-    }
+  callDetails: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'CallDetail' 
   }]
 });
 
