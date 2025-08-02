@@ -65,13 +65,14 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Add call detail to a chat
 router.post('/:id/call-details', verifyToken, async (req, res) => {
   try {
     const { buyingStatus, description, followUpDate } = req.body;
     
+    // Automatically add contact from URL params
     const callDetail = new CallDetail({
-      chat: req.params.id,
+      contact: req.params.id, // Add contact from URL
+      chat: req.params.id,    // Also add to chat reference
       buyingStatus,
       description,
       followUpDate
@@ -86,10 +87,12 @@ router.post('/:id/call-details', verifyToken, async (req, res) => {
     
     res.status(201).json(savedCallDetail);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ 
+      message: err.message,
+      details: err.errors // Shows validation errors
+    });
   }
 });
-
 // Delete a call detail
 router.delete('/call-details/:id', verifyToken, async (req, res) => {
   try {
