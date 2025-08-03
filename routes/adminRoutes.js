@@ -1,48 +1,176 @@
-const express = require("express");
-require('dotenv').config();
-const jwt = require("jsonwebtoken");
-const router = express.Router();
+  const express = require('express');
+  const bcrypt = require('bcryptjs');
+  const User = require('../models/User');
+  const router = express.Router();
+const { auth } = require('../middleware/auth');
 
-const ADMIN_PASSWORD = process.env.PASSWORD;  // Keep secret in .env
-const JWT_SECRET = process.env.JWT_SECRET  // Should be strong in production
+  // Create new user (admin only)
+  router.post('/users', auth(['admin']), async (req, res) => {
+    try {
+      const { username, password, email, fullName, role } = req.body;
 
+      // Check if user exists
+      const existingUser = await User.findOne({ 
+        $or: [{ username }, { email }] 
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ 
+          error: 'Username or email already exists' 
+        });
+      }
 
-// Login Route
-router.post("/login", (req, res) => {
-  const { password } = req.body;
+      // Create user
+      const user = new User({
+        username,
+        password,
+        email,
+        fullName,
+        role,
+        createdBy: req.user.userId
+      });
 
-  if (password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ role: "admin" }, JWT_SECRET, { expiresIn: "10h" });
-    return res.json({ token });
-  }
+      await user.save();
+      
+      // Return user without password
+      const userObj = user.toObject();
+      delete userObj.password;
 
-  return res.status(401).json({ error: "Invalid password" });
-});
+      res.status(201).json(userObj);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(403).json({ error: "Token missing" });
+  // Get all users (admin only)
+  router.get('/users', auth(['admin']), async (req, res) => {
+    try {
+      const users = await User.find()
+        .select('-password')
+        .populate('createdBy', 'username');
 
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user (admin only)
+  router.put('/users/:id', auth(['admin']), async (req, res) => {
+    try {
+      const { fullName, email, role, isActive } = req.body;
+      
+      const updates = {};
+      if (fullName) updates.fullName = fullName;
+      if (email) updates.email = email;
+      if (role) updates.role = role;
+      if (typeof isActive === 'boolean') updates.isActive = isActive;
+
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        updates,
+        { new: true }
+      ).select('-password');
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset password (admin only)
+  router.put('/users/:id/reset-password', auth(['admin']), async (req, res) => {
+    try {
+      const { newPassword } = req.body;
+      
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ 
+          error: 'Password must be at least 6 characters' 
+        });
+      }
+
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      user.password = newPassword;
+      await user.save();
+
+      res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete user (admin only - soft delete)
+  router.delete('/users/:id', auth(['admin']), async (req, res) => {
+    try {
+      const user = await User.findByIdAndUpdate(
+        req.params.id,
+        { isActive: false },
+        { new: true }
+      ).select('-password');
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ 
+        message: 'User deactivated successfully',
+        user
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+router.get('/users/:id/history', auth(['admin', 'manager']), async (req, res) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "admin") throw new Error("Not authorized");
-    next();
-  } catch (err) {
-    res.status(401).json({ error: "Unauthorized" });
+    if (req.user.role !== 'admin' && req.user.userId !== req.params.id) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+
+    const user = await User.findById(req.params.id)
+      .select('loginHistory fullName username');
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Group login records by date
+    const grouped = {};
+    user.loginHistory.forEach(entry => {
+      const date = new Date(entry.loginAt).toISOString().split('T')[0];
+      if (!grouped[date]) {
+        grouped[date] = {
+          entries: [],
+          totalMinutes: 0
+        };
+      }
+      const minutes = entry.durationMinutes || 0;
+      grouped[date].entries.push({
+        loginAt: entry.loginAt,
+        logoutAt: entry.logoutAt,
+        durationMinutes: minutes
+      });
+      grouped[date].totalMinutes += minutes;
+    });
+
+    res.json({
+      user: {
+        id: user._id,
+        username: user.username,
+        fullName: user.fullName
+      },
+      dailyLoginSummary: grouped
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-};
-
-// Update 'contacted' status
-router.put('/:id', verifyToken, async (req, res) => {
-  const { contacted } = req.body;
-  await Chat.findByIdAndUpdate(req.params.id, { contacted });
-  res.json({ message: 'Status updated' });
 });
 
-// Delete a chat
-router.delete('/:id', verifyToken, async (req, res) => {
-  await Chat.findByIdAndDelete(req.params.id);
-  res.json({ message: 'Chat deleted' });
-});
 
-module.exports = router;
+  module.exports = router;

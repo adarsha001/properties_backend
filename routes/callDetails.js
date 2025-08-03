@@ -12,7 +12,7 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.role !== "admin") throw new Error("Not authorized");
+
     next();
   } catch (err) {
     res.status(401).json({ error: "Unauthorized" });
