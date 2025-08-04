@@ -1,71 +1,44 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const UserSchema = new mongoose.Schema({
-  username: {
-    type: String,
+const jwt = require("jsonwebtoken");
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  fullName: { type: String, required: true },
+  role: { 
+    type: String, 
     required: true,
-    unique: true,
-    trim: true
+    enum: ['admin', 'manager', 'agent'],
+    default: 'agent'
   },
-  password: {
-    type: String,
-    required: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  fullName: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    enum: ['admin', 'manager'],
-    required: true
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-    loginHistory: [{
-  loginAt: { type: Date, required: true },
-  logoutAt: { type: Date },
-  durationMinutes: { type: Number }, // Optional: store computed duration
-}],
-  lastLogin: Date
-});
+  isActive: { type: Boolean, default: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  loginHistory: [{
+    loginAt: { type: Date, default: Date.now },
+    logoutAt: Date,
+    durationMinutes: Number,
+    ipAddress: String
+  }]
+}, { timestamps: true });
 
-
-UserSchema.methods.generateAuthToken = function () {
-  return jwt.sign(
-    { userId: this._id, role: this.role },
-    process.env.JWT_SECRET, // Make sure this is set in your .env file
-    { expiresIn: '2d' }
-  );
-};
-
-// Hash password before saving
-UserSchema.pre('save', async function(next) {
+// Password hashing middleware
+userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
-
-module.exports = mongoose.model('User', UserSchema);
+// In your User model (models/User.js)
+userSchema.methods.generateAuthToken = function() {
+  const token = jwt.sign(
+    {
+      userId: this._id,
+      role: this.role,
+      username: this.username
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+  return token;
+};
+module.exports = mongoose.model('User', userSchema);

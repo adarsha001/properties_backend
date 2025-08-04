@@ -5,6 +5,27 @@
 const { auth } = require('../middleware/auth');
 
   // Create new user (admin only)
+
+  const verifyTokenAndRole = (roles = []) => {
+    return (req, res, next) => {
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) return res.status(403).json({ error: "Token missing" });
+  
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+  
+        // Check if user has required role
+        if (roles.length && !roles.includes(decoded.role)) {
+          return res.status(403).json({ error: "Insufficient permissions" });
+        }
+  
+        next();
+      } catch (err) {
+        res.status(401).json({ error: "Unauthorized" });
+      }
+    };
+  };
   router.post('/users', auth(['admin']), async (req, res) => {
     try {
       const { username, password, email, fullName, role } = req.body;
@@ -82,52 +103,58 @@ const { auth } = require('../middleware/auth');
     }
   });
 
-  // Reset password (admin only)
-  router.put('/users/:id/reset-password', auth(['admin']), async (req, res) => {
+// In your chat routes file (routes/chat.js)
+  router.put('/batch-assign', verifyTokenAndRole(['admin']), async (req, res) => {
     try {
-      const { newPassword } = req.body;
+      const { chatIds, managerId } = req.body;
       
-      if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({ 
-          error: 'Password must be at least 6 characters' 
-        });
+      // Validate inputs
+      if (!Array.isArray(chatIds)) {
+        return res.status(400).json({ error: 'chatIds must be an array' });
+      }
+      if (!managerId) {
+        return res.status(400).json({ error: 'managerId is required' });
       }
 
-      const user = await User.findById(req.params.id);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      user.password = newPassword;
-      await user.save();
-
-      res.json({ message: 'Password reset successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Delete user (admin only - soft delete)
-  router.delete('/users/:id', auth(['admin']), async (req, res) => {
-    try {
-      const user = await User.findByIdAndUpdate(
-        req.params.id,
-        { isActive: false },
-        { new: true }
-      ).select('-password');
-
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      res.json({ 
-        message: 'User deactivated successfully',
-        user
+      // Verify manager exists and is active
+      const manager = await User.findOne({ 
+        _id: managerId,
+        role: 'manager',
+        isActive: true 
       });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+      
+      if (!manager) {
+        return res.status(400).json({ error: 'Invalid manager specified or manager not active' });
+      }
+
+      // Update all chats in a single operation
+      const result = await Chat.updateMany(
+        { _id: { $in: chatIds } },
+        { assignedTo: managerId }
+      );
+
+      if (result.nModified === 0) {
+        return res.status(404).json({ error: 'No chats were updated' });
+      }
+
+      // Fetch updated chats to return
+      const updatedChats = await Chat.find({ _id: { $in: chatIds } })
+        .populate('assignedTo', 'username fullName');
+
+      res.json({
+        message: `Successfully assigned ${result.nModified} chats`,
+        chats: updatedChats
+      });
+    } catch (err) {
+      console.error('Batch assignment error:', err);
+      res.status(500).json({ 
+        error: 'Failed to assign chats',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   });
+
+
 
 router.get('/users/:id/history', auth(['admin', 'manager']), async (req, res) => {
   try {

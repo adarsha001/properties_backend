@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const chatSchema = new mongoose.Schema({
   intent: String,
@@ -10,11 +10,15 @@ const chatSchema = new mongoose.Schema({
   name: String,
   phone: String,
   contacted: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now },
-  callDetails: [{ 
+  assignedTo: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'CallDetail' 
-  }]
+    ref: 'User' 
+  },
+  callDetails: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CallDetail'
+  }],
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model("Chat", chatSchema);
+module.exports = mongoose.model('Chat', chatSchema);
