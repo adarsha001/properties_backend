@@ -5,6 +5,18 @@ const CallDetail = require('../models/CallDetail');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
+
+// Create new chat
+router.post("/bot", async (req, res) => {
+  try {
+    const chat = await Chat.create(req.body);
+    res.status(201).json(chat);
+    
+  } catch (err) {
+    res.status(400).json({ error: "Error saving chat data" });
+  }
+});
+
 // Middleware
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -31,15 +43,6 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// Create new chat
-router.post("/", verifyToken, async (req, res) => {
-  try {
-    const chat = await Chat.create(req.body);
-    res.status(201).json(chat);
-  } catch (err) {
-    res.status(400).json({ error: "Error saving chat data" });
-  }
-});
 
 // Update chat (mark as contacted)
 router.put('/:id', verifyToken, async (req, res) => {
