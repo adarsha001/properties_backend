@@ -6,7 +6,8 @@ const { checkInactiveSessions } = require('./middleware/auth');
 const app = express();
 // const { checkInactiveSessions } = require('./middleware/auth');
 const User = require('./models/User');
-const allowedOrigins = ['https://sppropertiesbengaluru.com', 'http://localhost:5173'];
+// const allowedOrigins = ['https://sppropertiesbengaluru.com', 'http://localhost:5173'];
+const allowedOrigins = ['https://sppropertiesbengaluru.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
