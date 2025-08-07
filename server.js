@@ -6,8 +6,8 @@ const { checkInactiveSessions } = require('./middleware/auth');
 const app = express();
 // const { checkInactiveSessions } = require('./middleware/auth');
 const User = require('./models/User');
-// const allowedOrigins = ['https://sppropertiesbengaluru.com', 'http://localhost:5173'];
-const allowedOrigins = ['https://sppropertiesbengaluru.com'];
+const allowedOrigins = ['https://sppropertiesbengaluru.com', 'http://localhost:5173'];
+// const allowedOrigins = ['https://sppropertiesbengaluru.com'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -29,7 +29,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const leadsRoutes = require('./routes/leads');
 const callDetailRoutes = require('./routes/callDetails');
 const authRoutes = require('./routes/authRoutes');
-
+const excelRoutes=require('./routes/excelRoutes')
 // ... other routes
 
 app.use('/api/auth', authRoutes);
@@ -40,6 +40,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/callDetails', callDetailRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/excel', excelRoutes);
 
 setInterval(async () => {
   try {

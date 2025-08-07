@@ -28,6 +28,10 @@ const verifyTokenAndRole = (roles = []) => {
   };
 };
 
+//
+// ✅ STATIC ROUTES FIRST
+//
+
 // Create new chat (public endpoint)
 router.post("/bot", async (req, res) => {
   try {
@@ -38,22 +42,67 @@ router.post("/bot", async (req, res) => {
   }
 });
 
+// ✅ BATCH ASSIGN route (must be above dynamic /:id routes)
+router.put('/batch-assign', verifyTokenAndRole(['admin']), async (req, res) => {
+  try {
+    const { chatIds, managerId } = req.body;
 
-// Admin assigns chat to manager
+    if (!Array.isArray(chatIds)) {
+      return res.status(400).json({ error: 'chatIds must be an array' });
+    }
+    if (!managerId) {
+      return res.status(400).json({ error: 'managerId is required' });
+    }
+
+    const manager = await User.findOne({
+      _id: managerId,
+      role: 'manager',
+      isActive: true
+    });
+
+    if (!manager) {
+      return res.status(400).json({ error: 'Invalid manager or not active' });
+    }
+
+    const result = await Chat.updateMany(
+      { _id: { $in: chatIds } },
+      { assignedTo: managerId }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ error: 'No chats were updated' });
+    }
+
+    const updatedChats = await Chat.find({ _id: { $in: chatIds } })
+      .populate('assignedTo', 'username fullName');
+
+    res.json({
+      message: `Assigned ${result.modifiedCount} chats`,
+      chats: updatedChats
+    });
+  } catch (err) {
+    console.error('Batch assignment error:', err);
+    res.status(500).json({
+      error: 'Failed to assign chats',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+  }
+});
+
+// ✅ Assign single chat to a manager
 router.put('/:id/assign', verifyTokenAndRole(['admin']), async (req, res) => {
   try {
     const { managerId } = req.body;
-    
-    // Verify manager exists and is actually a manager
-    const manager = await User.findOne({ 
+
+    const manager = await User.findOne({
       _id: managerId,
       role: 'manager',
-      isActive: true 
+      isActive: true
     });
-    
+
     if (!manager) {
-      return res.status(400).json({ 
-        error: 'Invalid manager specified or manager not active' 
+      return res.status(400).json({
+        error: 'Invalid manager specified or manager not active'
       });
     }
 
@@ -69,19 +118,19 @@ router.put('/:id/assign', verifyTokenAndRole(['admin']), async (req, res) => {
 
     res.json(chat);
   } catch (err) {
-    console.error('Assignment error:', err); // Add logging
-    res.status(500).json({ 
+    console.error('Assignment error:', err);
+    res.status(500).json({
       error: 'Failed to assign chat',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 });
-// Get all chats (admin sees all, manager sees assigned)
+
+// ✅ Get all chats (admin sees all, manager sees assigned)
 router.get('/', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   try {
     let query = {};
-    
-    // If manager, only show assigned chats
+
     if (req.user.role === 'manager') {
       query.assignedTo = req.user.userId;
     }
@@ -97,11 +146,15 @@ router.get('/', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   }
 });
 
-// Get chat by ID (only admin or assigned manager can access)
+//
+// ⛔ DYNAMIC ROUTES LAST
+//
+
+// ✅ Get chat by ID (only admin or assigned manager)
 router.get('/:id', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   try {
     let query = { _id: req.params.id };
-    
+
     if (req.user.role === 'manager') {
       query.assignedTo = req.user.userId;
     }
@@ -120,20 +173,16 @@ router.get('/:id', verifyTokenAndRole(['admin', 'manager']), async (req, res) =>
   }
 });
 
-// Update chat status (admin or assigned manager)
+// ✅ Update chat (admin or assigned manager)
 router.put('/:id', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   try {
     let query = { _id: req.params.id };
-    
+
     if (req.user.role === 'manager') {
       query.assignedTo = req.user.userId;
     }
 
-    const chat = await Chat.findOneAndUpdate(
-      query,
-      req.body,
-      { new: true }
-    );
+    const chat = await Chat.findOneAndUpdate(query, req.body, { new: true });
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found or not assigned to you' });
@@ -145,11 +194,11 @@ router.put('/:id', verifyTokenAndRole(['admin', 'manager']), async (req, res) =>
   }
 });
 
-// Add call details to chat (admin or assigned manager)
+// ✅ Add call details to chat
 router.post('/:id/call-details', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   try {
     let query = { _id: req.params.id };
-    
+
     if (req.user.role === 'manager') {
       query.assignedTo = req.user.userId;
     }
@@ -164,9 +213,9 @@ router.post('/:id/call-details', verifyTokenAndRole(['admin', 'manager']), async
       chat: chat._id,
       createdBy: req.user.userId
     });
-    
+
     const savedCallDetail = await callDetail.save();
-    
+
     chat.callDetails.push(savedCallDetail._id);
     await chat.save();
 
