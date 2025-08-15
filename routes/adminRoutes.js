@@ -3,7 +3,7 @@
   const User = require('../models/User');
   const router = express.Router();
 const { auth } = require('../middleware/auth');
-import Click from "../models/Click.js";
+const Click =require("../models/Click.js");
   // Create new user (admin only)
 
   router.post('/users', auth(['admin']), async (req, res) => {
