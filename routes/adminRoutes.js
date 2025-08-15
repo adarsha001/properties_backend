@@ -129,7 +129,7 @@ router.get('/users/:id/history', auth(['admin', 'manager']), async (req, res) =>
   }
 });
 // Admin view – all clicks grouped
-router.get("/admin", auth(["admin"]), async (req, res) => {
+router.get("/click", auth(["admin"]), async (req, res) => {
   try {
     const data = await Click.aggregate([
       {
