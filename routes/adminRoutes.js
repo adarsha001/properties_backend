@@ -3,7 +3,7 @@
   const User = require('../models/User');
   const router = express.Router();
 const { auth } = require('../middleware/auth');
-
+import Click from "../models/Click.js";
   // Create new user (admin only)
 
   router.post('/users', auth(['admin']), async (req, res) => {
@@ -124,6 +124,24 @@ router.get('/users/:id/history', auth(['admin', 'manager']), async (req, res) =>
       },
       dailyLoginSummary: grouped
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+// Admin view – all clicks grouped
+router.get("/admin", auth(["admin"]), async (req, res) => {
+  try {
+    const data = await Click.aggregate([
+      {
+        $group: {
+          _id: { type: "$type", sourceComponent: "$sourceComponent", value: "$value" },
+          totalClicks: { $sum: "$count" }
+        }
+      },
+      { $sort: { totalClicks: -1 } }
+    ]);
+
+    res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
