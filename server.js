@@ -2,10 +2,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
-const { checkInactiveSessions } = require('./middleware/auth');
+const { checkInactiveSessions } = require('./middleware/auth.js');
 const app = express();
 // const { checkInactiveSessions } = require('./middleware/auth');
-const User = require('./models/User');
+const User = require('./models/User.js');
 const allowedOrigins = ['https://sppropertiesbengaluru.com', 'http://localhost:5173'];
 // const allowedOrigins = ['https://sppropertiesbengaluru.com'];
 
@@ -23,14 +23,15 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-const adminRoutes = require('./routes/adminRoutes');
-const chatRoutes = require('./routes/chatRoutes');
-const contactRoutes = require('./routes/contactRoutes');
-const leadsRoutes = require('./routes/leads');
-const callDetailRoutes = require('./routes/callDetails');
-const authRoutes = require('./routes/authRoutes');
-const excelRoutes=require('./routes/excelRoutes')
-// ... other routes
+const adminRoutes = require('./routes/adminRoutes.js');
+const chatRoutes = require('./routes/chatRoutes.js');
+const contactRoutes = require('./routes/contactRoutes.js');
+const leadsRoutes = require('./routes/leads.js');
+const callDetailRoutes = require('./routes/callDetails.js');
+const authRoutes = require('./routes/authRoutes.js');
+const excelRoutes=require('./routes/excelRoutes.js')
+
+const clickRoutes = require("./routes/clickRoutes.js");
 
 app.use('/api/auth', authRoutes);
 
@@ -41,7 +42,7 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/callDetails', callDetailRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/excel', excelRoutes);
-
+app.use("/api/click", clickRoutes);
 setInterval(async () => {
   try {
     const users = await User.find({
