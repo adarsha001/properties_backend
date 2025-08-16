@@ -43,19 +43,7 @@ app.use('/api/callDetails', callDetailRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/excel', excelRoutes);
 app.use("/api/click", clickRoutes);
-setInterval(async () => {
-  try {
-    const users = await User.find({
-      'loginHistory.logoutTime': { $exists: false }
-    });
-    
-    for (const user of users) {
-      await checkInactiveSessions(user);
-    }
-  } catch (err) {
-    console.error('Error checking inactive sessions:', err);
-  }
-}, 1000);
+
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
