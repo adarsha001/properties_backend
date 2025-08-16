@@ -48,28 +48,28 @@ app.use("/api/click", clickRoutes);
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     // Create initial admin user if doesn't exist
-    createInitialAdmin()  
+    // createInitialAdmin()  
     app.listen(process.env.PORT, () => {
       console.log('Server running on port', process.env.PORT);
     });
   })
   .catch(err => console.log(err));
 
-async function createInitialAdmin() {
-  const User = require('./models/User');
-  // const adminExists = await User.findOne({ username: 'admin' });
+// async function createInitialAdmin() {
+//   const User = require('./models/User');
+//   // const adminExists = await User.findOne({ username: 'admin' });
   
   
-    const admin = new User({
-      username: 'varshan',
-      password: process.env.ADMIN_INITIAL_PASSWORD_VARSHAN ,
-      email: 'varshan@gmail.com', 
-      fullName: 'varshankumar',
-      role: 'manager', 
-      isActive: true
-    });
+//     const admin = new User({
+//       username: 'varshan',
+//       password: process.env.ADMIN_INITIAL_PASSWORD_VARSHAN ,
+//       email: 'varshan@gmail.com', 
+//       fullName: 'varshankumar',
+//       role: 'manager', 
+//       isActive: true
+//     });
     
-    await admin.save();
-    console.log('Initial admin user created');
+//     await admin.save();
+//     console.log('Initial admin user created');
   
-}
+// }
