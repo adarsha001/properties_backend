@@ -126,6 +126,28 @@ router.put('/:id/assign', verifyTokenAndRole(['admin']), async (req, res) => {
   }
 });
 
+// ✅ Delete chat submission (admin only)
+router.delete('/:id', verifyTokenAndRole(['admin']), async (req, res) => {
+  try {
+    const chat = await Chat.findByIdAndDelete(req.params.id);
+    
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Also delete associated call details
+    await CallDetail.deleteMany({ chat: req.params.id });
+
+    res.json({ message: 'Chat deleted successfully' });
+  } catch (err) {
+    console.error('Delete chat error:', err);
+    res.status(500).json({ 
+      error: 'Failed to delete chat',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
 // ✅ Get all chats (admin sees all, manager sees assigned)
 router.get('/', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
   try {
@@ -222,6 +244,49 @@ router.post('/:id/call-details', verifyTokenAndRole(['admin', 'manager']), async
     res.status(201).json(savedCallDetail);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// ✅ Delete call detail (admin or assigned manager)
+router.delete('/:id/call-details/:detailId', verifyTokenAndRole(['admin', 'manager']), async (req, res) => {
+  try {
+    // First verify the chat exists and is assigned to the manager (if manager)
+    let chatQuery = { _id: req.params.id };
+    
+    if (req.user.role === 'manager') {
+      chatQuery.assignedTo = req.user.userId;
+    }
+
+    const chat = await Chat.findOne(chatQuery);
+    if (!chat) {
+      return res.status(404).json({ 
+        error: 'Chat not found or not assigned to you' 
+      });
+    }
+
+    // Delete the call detail
+    const result = await CallDetail.findOneAndDelete({
+      _id: req.params.detailId,
+      chat: req.params.id
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: 'Call detail not found' });
+    }
+
+    // Remove the reference from the chat document
+    await Chat.updateOne(
+      { _id: req.params.id },
+      { $pull: { callDetails: req.params.detailId } }
+    );
+
+    res.json({ message: 'Call detail deleted successfully' });
+  } catch (err) {
+    console.error('Delete call detail error:', err);
+    res.status(500).json({ 
+      error: 'Failed to delete call detail',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
