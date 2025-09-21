@@ -44,7 +44,7 @@ const Click =require("../models/Click.js");
   });
 
   // Get all users (admin only)
-  router.get('/users', auth(['admin']), async (req, res) => {
+  router.get('/users', auth(['admin', 'manager']), async (req, res) => {
     try {
       const users = await User.find()
         .select('-password')
@@ -129,7 +129,7 @@ router.get('/users/:id/history', auth(['admin', 'manager']), async (req, res) =>
   }
 });
 // Admin view – all clicks grouped
-router.get("/click", auth(["admin"]), async (req, res) => {
+router.get("/click", auth(['admin', 'manager']), async (req, res) => {
   try {
     const data = await Click.aggregate([
       {
