@@ -41,7 +41,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/callDetails', callDetailRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/excel', excelRoutes);
+app.use("/api/excel", excelRoutes);
 app.use("/api/click", clickRoutes);
 
 // MongoDB connection
